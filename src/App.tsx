@@ -70,7 +70,7 @@ function Layout({ children }: { children: React.ReactNode }) {
       </main>
 
       <footer className="mt-auto pt-10 border-t border-linen text-center text-[10px] text-stone uppercase tracking-widest font-semibold flex flex-col md:flex-row justify-between gap-4">
-        <span>Purr-Real v0.6.0</span>
+        <span>Purr-Real v0.8.0</span>
         <div className="flex gap-4 justify-center">
           <Link to="/" className="hover:text-sage transition-colors">Overview</Link>
           <Link to="/gallery" className="hover:text-sage transition-colors">Archive</Link>
