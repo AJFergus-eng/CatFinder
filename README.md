@@ -1,22 +1,20 @@
-# CatFinder
-Cat Website
-> It has cats :3 - Aiden Ferguson, founder
+<div align="center">
+<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+</div>
 
-Many websites out there are just general mass media sharing websites that you can find everything on. However, sometimes people just want to just this website shines a spotlight on users' beloved felines. 
+# Run and deploy your AI Studio app
 
-## Currently Intergrated Features:
-- ### Image upload to local storage
+This contains everything you need to run your app locally.
 
-## Planned features:
-- ### Intergrate MongoDB
-  - Will store user data like pictures to database, then retrieve said pictures to use.
-- ### Map Feature
-  - Takes the geo location from picture metadata or current location or a custom location and displays it on a map of the world.
-- ### Missing Pet Function
-  - If enabled, would alert other users in the app (if they opt in) about a missing cat in their area and show up as a red pin on the cat map. 
+View your app in AI Studio: https://ai.studio/apps/a825a23c-f7e9-4a78-a7a9-b25970e812d7
+
+## Run Locally
+
+**Prerequisites:**  Node.js
 
 
-
-
-Temp Link
-https://cat-finder-q7vap.ondigitalocean.app/
+1. Install dependencies:
+   `npm install`
+2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
+3. Run the app:
+   `npm run dev`
