@@ -1,10 +1,29 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Trophy, ArrowRight, Shield, Globe, Users } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import WorldMap from '../components/WorldMap';
 
 export default function LandingPage() {
+  const [cats, setCats] = useState<{ species: string }[]>([]);
+
+  useEffect(() => {
+    fetch('/api/cats')
+      .then(res => res.json())
+      .then(data => setCats(data))
+      .catch(console.error);
+  }, []);
+
+  const leaderboard = Object.entries(
+    cats.reduce((acc, cat) => {
+      const species = cat.species || 'Unknown';
+      acc[species] = (acc[species] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>)
+  )
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5);
+
   return (
     <div className="flex-1 flex flex-col gap-10 animate-in fade-in duration-700">
       {/* Hero Section */}
@@ -67,8 +86,8 @@ export default function LandingPage() {
                 <Trophy className="text-sage" size={24} />
               </div>
               <div>
-                <h3 className="font-serif text-2xl text-clay">Top Contributors</h3>
-                <p className="text-stone text-xs uppercase tracking-widest font-bold">Archival Merit Registry</p>
+                <h3 className="font-serif text-2xl text-clay">All Time Common Cats</h3>
+                <p className="text-stone text-xs uppercase tracking-widest font-bold">Cats ordered on how common they appear</p>
               </div>
             </div>
             <Users className="text-linen" size={20} />
@@ -76,20 +95,23 @@ export default function LandingPage() {
 
           {/* Leaderboard Skeleton Placeholder */}
           <div className="flex-1 flex flex-col gap-4">
-            {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="flex items-center gap-4 p-4 rounded-2xl bg-bone/50 border border-linen/50">
-                <div className="w-8 h-8 rounded-full bg-linen flex items-center justify-center text-stone text-xs font-bold">
-                  {i}
-                </div>
-                <div className="flex-1 h-3 bg-linen rounded-full" />
-                <div className="w-12 h-3 bg-linen/20 rounded-full" />
+            {leaderboard.length === 0 ? (
+              <div className="flex-1 flex items-center justify-center">
+                <p className="text-stone text-[10px] uppercase tracking-widest font-medium animate-pulse">
+                  Synchronizing data with satellite network...
+                </p>
               </div>
-            ))}
-            <div className="mt-auto pt-4 text-center">
-              <p className="text-stone text-[10px] uppercase tracking-widest font-medium animate-pulse">
-                Synchronizing data with satellite network...
-              </p>
-            </div>
+            ) : (
+              leaderboard.map(([species, count], i) => (
+                <div key={species} className="flex items-center gap-4 p-4 rounded-2xl bg-bone/50 border border-linen/50">
+                  <div className="w-8 h-8 rounded-full bg-linen flex items-center justify-center text-stone text-xs font-bold">
+                    {i + 1}
+                  </div>
+                  <span className="flex-1 text-clay text-sm font-serif">{species}</span>
+                  <span className="text-stone text-xs font-semibold">{count} {count === 1 ? 'entry' : 'entries'}</span>
+                </div>
+              ))
+            )}
           </div>
         </motion.section>
       </div>
