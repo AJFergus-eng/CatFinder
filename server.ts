@@ -205,6 +205,38 @@ async function startServer() {
       res.status(500).json({ error: "Failed to save cat data" });
     }
   });
+  
+  // Breed prediction proxy
+  app.post("/api/predict-breed", async (req, res) => {
+    try {
+      const { imageBase64 } = req.body;
+
+      const base64Data = imageBase64.replace(/^data:image\/\w+;base64,/, '');
+      const imageBuffer = Buffer.from(base64Data, 'base64');
+
+      const boundary = '----FormBoundary' + Math.random().toString(36);
+      const body = Buffer.concat([
+        Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="cat.jpg"\r\nContent-Type: image/jpeg\r\n\r\n`),
+        imageBuffer,
+        Buffer.from(`\r\n--${boundary}--\r\n`)
+      ]);
+
+      const response = await fetch('http://localhost:8000/predict', {
+        method: 'POST',
+        headers: {
+          'Content-Type': `multipart/form-data; boundary=${boundary}`,
+          'Content-Length': body.length.toString()
+        },
+        body
+      });
+
+      const data = await response.json();
+      res.json(data);
+    } catch (error) {
+      console.error('Breed prediction error:', error);
+      res.status(500).json({ error: 'Failed to predict breed' });
+    }
+  });
 
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {

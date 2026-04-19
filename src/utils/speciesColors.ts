@@ -16,9 +16,10 @@ export const SPECIES_COLORS: Record<string, string> = {
 export const DEFAULT_COLOR = '#94A3B8';
 
 export function getSpeciesColor(species: string): string {
-  const key = (species || '').toLowerCase().trim();
+  const key = (species || '').toLowerCase().replace(/[\s_]+/g, '');
   for (const [name, color] of Object.entries(SPECIES_COLORS)) {
-    if (key.includes(name)) return color;
+    const normalizedName = name.toLowerCase().replace(/[\s_]+/g, '');
+    if (key.includes(normalizedName) || normalizedName.includes(key)) return color;
   }
   return DEFAULT_COLOR;
 }

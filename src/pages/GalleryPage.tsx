@@ -27,6 +27,7 @@ export default function GalleryPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [locationMode, setLocationMode] = useState<'exact' | 'fuzzy'>('fuzzy');
   const gpsRef = useRef<{ lat: number | null; lng: number | null }>({ lat: null, lng: null });
+  const [isPredicting, setIsPredicting] = useState(false);
 
   const [formData, setFormData] = useState({
     species: '',
@@ -76,7 +77,7 @@ export default function GalleryPage() {
     const reader = new FileReader();
     reader.onload = (event) => {
       const img = new Image();
-      img.onload = () => {
+      img.onload = async () => {
         const MAX_WIDTH = 800;
         const MAX_HEIGHT = 800;
         let width = img.width;
@@ -101,7 +102,26 @@ export default function GalleryPage() {
         ctx?.drawImage(img, 0, 0, width, height);
 
         const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
-        setFormData(prev => ({ ...prev, image: compressedBase64 }));
+      setFormData(prev => ({ ...prev, image: compressedBase64 }));
+
+      // Auto-detect breed
+      setIsPredicting(true);
+      try {
+        const response = await fetch('/api/predict-breed', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ imageBase64: compressedBase64 })
+        });
+        const data = await response.json();
+        if (data.breed) {
+          setFormData(prev => ({ ...prev, species: data.breed.replaceAll('_', ' ') }));
+          console.log(`Predicted breed: ${data.breed}`);
+        }
+      } catch (err) {
+        console.log('Could not predict breed:', err);
+      } finally {
+        setIsPredicting(false);
+      }
       };
       if (event.target?.result) {
         img.src = event.target.result as string;
@@ -189,6 +209,21 @@ export default function GalleryPage() {
                   onChange={e => setFormData({ ...formData, catName: e.target.value })}
                   className="w-full px-4 py-3 bg-bone border border-linen rounded-lg text-clay text-sm focus:outline-none focus:border-sage transition-all"
                 />
+              </div>
+              <div>
+                <label className="text-[11px] font-bold uppercase tracking-widest text-stone mb-1 px-1 block">
+                  Species {isPredicting && <span className="text-sage normal-case tracking-normal font-normal">— Identifying breed...</span>}
+                </label>
+                <input
+                  type="text"
+                  placeholder={isPredicting ? "Analyzing image..." : "e.g. Siamese"}
+                  value={formData.species}
+                  onChange={e => setFormData({ ...formData, species: e.target.value })}
+                  className="w-full px-4 py-3 bg-bone border border-linen rounded-lg text-clay text-sm focus:outline-none focus:border-sage transition-all"
+                />
+                {formData.species && !isPredicting && (
+                  <p className="text-[10px] text-sage mt-1 px-1">✓ Breed auto-detected — you can edit if needed</p>
+                )}
               </div>
               <div>
                 <label className="text-[11px] font-bold uppercase tracking-widest text-stone mb-1 px-1 block">Coat Coloration</label>
