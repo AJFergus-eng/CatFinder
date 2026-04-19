@@ -7,18 +7,14 @@ import mongoose from "mongoose";
 import dotenv from "dotenv";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
+import { spawn } from "child_process"
 
 dotenv.config();
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DATA_FILE = path.join(__dirname, "cats.json");
-<<<<<<< HEAD
-const MONGODB_URI = process.env.MONGODB_URI;
-=======
 //const MONGODB_URI = process.env.MONGODB_URI;
 const MONGODB_URI = "mongodb://ajfergus_db_user:5rKX!4!2!GcpFRK@ac-fukbepf-shard-00-00.5homxhh.mongodb.net:27017,ac-fukbepf-shard-00-01.5homxhh.mongodb.net:27017,ac-fukbepf-shard-00-02.5homxhh.mongodb.net:27017/catArchive?ssl=true&replicaSet=atlas-7m4cri-shard-0&authSource=admin&retryWrites=true&w=majority";
-const TRACKER_FILE = path.join(__dirname, "tracker.json");
->>>>>>> 444324945fceaf0d0dba968f252891b765ce83cf
 const USERS_FILE = path.join(__dirname, "users.json");
 const JWT_SECRET = process.env.JWT_SECRET || "fallback_super_secret_key_123";
 
@@ -263,6 +259,23 @@ async function startServer() {
       res.status(500).json({ error: "Failed to save cat data" });
     }
   });
+
+  // Start Python breed prediction server
+const pythonProcess = spawn('uvicorn', ['main:app', '--port', '8000'], {
+  cwd: 'C:\\Users\\Velri\\OneDrive\\Desktop\\VSC2\\Hackathon\\CatFinder',
+  stdio: 'inherit',
+  shell: true // needed on Windows
+});
+
+pythonProcess.on('error', (err) => {
+  console.error('Failed to start Python server:', err);
+});
+
+pythonProcess.on('close', (code) => {
+  console.log(`Python server exited with code ${code}`);
+});
+
+console.log('Starting Python breed prediction server on port 8000...');
 
   // Breed prediction proxy
   app.post("/api/predict-breed", async (req, res) => {
