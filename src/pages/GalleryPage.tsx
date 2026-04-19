@@ -228,7 +228,7 @@ export default function GalleryPage() {
 
   return (
     <div className="flex-1 lg:grid lg:grid-cols-[380px_1fr] gap-10 items-start">
-      <aside className="bg-natural-card rounded-[24px] p-8 shadow-[0_10px_30px_rgba(62,59,57,0.05)] border border-linen flex flex-col sticky top-10 h-fit max-lg:mb-10 animate-in fade-in slide-in-from-left-4 duration-700">
+      <aside className="bg-natural-card rounded-[24px] p-8 shadow-[0_10px_30px_rgba(62,59,57,0.05)] border border-linen flex flex-col relative z-10 lg:sticky lg:top-10 h-fit max-lg:mb-10 animate-in fade-in slide-in-from-left-4 duration-700">
         <label className="text-[11px] font-bold uppercase tracking-widest text-stone mb-6 px-1 block">Visual Record</label>
 
         {isAuthenticated ? (
