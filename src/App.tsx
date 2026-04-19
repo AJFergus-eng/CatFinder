@@ -11,13 +11,13 @@ import LoginPage from './pages/LoginPage.tsx';
 import { AuthProvider, useAuth } from './context/AuthContext.tsx';
 
 function HeaderAdminControl() {
-  const { isAuthenticated, email, logout } = useAuth();
+  const { isAuthenticated, username, logout } = useAuth();
   const navigate = useNavigate();
 
   if (isAuthenticated) {
     return (
       <div className="flex items-center gap-4 text-[10px] md:text-xs border-l border-linen pl-6 hidden md:flex">
-        <span className="text-sage font-medium">{email}</span>
+        <span className="text-sage font-medium">{username}</span>
         <button onClick={() => { logout(); navigate('/'); }} className="text-stone hover:text-red-400 font-semibold uppercase tracking-wider transition-colors">Logout</button>
       </div>
     );

@@ -35,6 +35,7 @@ const Cat = mongoose.model("Cat", catSchema);
 // User Schema
 const userSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
+  username: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   createdAt: { type: Date, default: Date.now }
 });
@@ -92,27 +93,30 @@ async function startServer() {
   // Auth Routes
   app.post("/api/register", async (req, res) => {
     try {
-      const { email, password } = req.body;
-      
+      const { email, password, username } = req.body;
+
+      if (!username) return res.status(400).json({ error: "Username is required" });
+
       const hashedPassword = await bcrypt.hash(password, 10);
 
       if (useMongo) {
-        const existingUser = await User.findOne({ email });
-        if (existingUser) return res.status(400).json({ error: "User already exists" });
+        const existingUser = await User.findOne({ $or: [{ email }, { username }] });
+        if (existingUser) return res.status(400).json({ error: "Email or username already exists" });
 
-        const user = new User({ email, password: hashedPassword });
+        const user = new User({ email, username, password: hashedPassword });
         await user.save();
       } else {
         const dataString = await fs.readFile(USERS_FILE, "utf-8");
         const users = JSON.parse(dataString);
         
-        if (users.find((u: any) => u.email === email)) {
-          return res.status(400).json({ error: "User already exists" });
+        if (users.find((u: any) => u.email === email || u.username === username)) {
+          return res.status(400).json({ error: "Email or username already exists" });
         }
         
         users.push({ 
           id: Date.now().toString(), 
-          email, 
+          email,
+          username,
           password: hashedPassword,
           createdAt: new Date().toISOString()
         });
@@ -146,8 +150,8 @@ async function startServer() {
       const validPassword = await bcrypt.compare(password, user.password);
       if (!validPassword) return res.status(400).json({ error: "Invalid password" });
 
-      const token = jwt.sign({ id: user._id || user.id, email: user.email }, JWT_SECRET, { expiresIn: "24h" });
-      res.json({ token, email: user.email });
+      const token = jwt.sign({ id: user._id || user.id, email: user.email, username: user.username }, JWT_SECRET, { expiresIn: "24h" });
+      res.json({ token, email: user.email, username: user.username });
     } catch (error: any) {
       console.error("LOGIN ERROR:", error);
       res.status(500).json({ error: "Login failed: " + (error?.message || "Unknown error") });

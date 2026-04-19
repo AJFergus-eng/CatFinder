@@ -9,6 +9,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [username, setUsername] = useState('');
   
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -24,14 +25,14 @@ export default function LoginPage() {
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify(isLogin ? { email, password } : { email, password, username }),
       });
 
       const data = await response.json();
 
       if (response.ok) {
         if (isLogin) {
-          login(data.token, data.email);
+          login(data.token, data.email, data.username);
           navigate('/gallery');
         } else {
           setIsLogin(true);
@@ -76,6 +77,21 @@ export default function LoginPage() {
             />
           </div>
 
+          {/*only shown when registering */}
+          {!isLogin && (
+            <div>
+              <label className="text-[11px] font-bold uppercase tracking-widest text-stone mb-1 px-1 block">Username</label>
+              <input
+                required
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="e.g. CatArchivistX"
+                className="w-full px-4 py-3 bg-bone border border-linen rounded-lg text-clay text-sm focus:outline-none focus:border-sage transition-all"
+              />
+            </div>
+          )}
+
           <div>
             <label className="text-[11px] font-bold uppercase tracking-widest text-stone mb-1 px-1 block">Password</label>
             <input 
@@ -98,7 +114,7 @@ export default function LoginPage() {
 
         <button 
           onClick={() => { setIsLogin(!isLogin); setError(''); }}
-          className="w-full mt-6 text-xs text-stone hover:text-sage font-medium transition-colors uppercase tracking-wider cursor-pointer" //sets cursor to be a pointer when hovering
+          className="w-full mt-6 text-xs text-stone hover:text-sage font-medium transition-colors uppercase tracking-wider cursor-pointer"
         >
           {isLogin ? "Sign Up" : "Back to Login"}
         </button>
