@@ -14,8 +14,21 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DATA_FILE = path.join(__dirname, "cats.json");
 //const MONGODB_URI = process.env.MONGODB_URI;
 const MONGODB_URI = "mongodb://ajfergus_db_user:5rKX!4!2!GcpFRK@ac-fukbepf-shard-00-00.5homxhh.mongodb.net:27017,ac-fukbepf-shard-00-01.5homxhh.mongodb.net:27017,ac-fukbepf-shard-00-02.5homxhh.mongodb.net:27017/catArchive?ssl=true&replicaSet=atlas-7m4cri-shard-0&authSource=admin&retryWrites=true&w=majority";
+const TRACKER_FILE = path.join(__dirname, "tracker.json");
 const USERS_FILE = path.join(__dirname, "users.json");
 const JWT_SECRET = process.env.JWT_SECRET || "fallback_super_secret_key_123";
+
+//Tracker Schema
+const trackerSchema = new mongoose.Schema({
+  temperature: Number,
+  velocity: Number,
+  latitude: Number,
+  longitude: Number,
+  arduino_mac: String,
+  is_connected: { type: Boolean, default: false },
+  timestamp: { type: Date, default: Date.now }
+});
+const Tracker = mongoose.model("Tracker", trackerSchema);
 
 // MongoDB Schema
 const catSchema = new mongoose.Schema({
@@ -91,7 +104,42 @@ async function startServer() {
   }
 
   // API Routes
-  
+
+  // Tracker Route
+  app.post("/api/tracker", async (req, res) => {
+    try {
+      if (useMongo) {
+        const ping = new Tracker(req.body);
+        await ping.save();
+        res.status(201).json(ping);
+      } else {
+        const data = await fs.readFile(TRACKER_FILE, "utf-8").catch(() => "[]");
+        const history = JSON.parse(data);
+        const newEntry = { ...req.body, timestamp: new Date() };
+        history.push(newEntry);
+        await fs.writeFile(TRACKER_FILE, JSON.stringify(history, null, 2));
+        res.status(201).json(newEntry);
+      }
+    } catch (error) {
+      res.status(500).json({ error: "Failed to save tracker data" });
+    }
+  });
+
+  app.get("/api/tracker/:mac", async (req, res) => {
+    try {
+      if (useMongo) {
+        const history = await Tracker.find({ arduino_mac: req.params.mac }).sort({ timestamp: -1 }).limit(100);
+        res.json(history);
+      } else {
+        const data = await fs.readFile(TRACKER_FILE, "utf-8").catch(() => "[]");
+        const history = JSON.parse(data).filter((i: any) => i.arduino_mac === req.params.mac);
+        res.json(history.reverse().slice(0, 100));
+      }
+    } catch (error) {
+      res.status(500).json({ error: "Fetch failed" });
+    }
+  });
+
   // Auth Routes
   app.post("/api/register", async (req, res) => {
     try {
