@@ -5,23 +5,58 @@ import path from "path";
 import { fileURLToPath } from "url";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
+import jwt from "jsonwebtoken";
+import bcrypt from "bcryptjs";
 
 dotenv.config();
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DATA_FILE = path.join(__dirname, "cats.json");
-const MONGODB_URI = process.env.MONGODB_URI;
+//const MONGODB_URI = process.env.MONGODB_URI;
+const MONGODB_URI = "mongodb://ajfergus_db_user:5rKX!4!2!GcpFRK@ac-fukbepf-shard-00-00.5homxhh.mongodb.net:27017,ac-fukbepf-shard-00-01.5homxhh.mongodb.net:27017,ac-fukbepf-shard-00-02.5homxhh.mongodb.net:27017/catArchive?ssl=true&replicaSet=atlas-7m4cri-shard-0&authSource=admin&retryWrites=true&w=majority";
+const USERS_FILE = path.join(__dirname, "users.json");
+const JWT_SECRET = process.env.JWT_SECRET || "fallback_super_secret_key_123";
+
 // MongoDB Schema
 const catSchema = new mongoose.Schema({
+  catName: String,
   species: String,
   color: String,
   fur: String,
   other: String,
   image: String,
+  lat: { type: Number, default: null },
+  lng: { type: Number, default: null },
+  isLost: { type: Boolean, default: false },
+  submittedBy: { type: String, default: null },
   createdAt: { type: Date, default: Date.now }
 });
 
 const Cat = mongoose.model("Cat", catSchema);
+
+// User Schema
+const userSchema = new mongoose.Schema({
+  email: { type: String, required: true, unique: true },
+  username: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
+  createdAt: { type: Date, default: Date.now }
+});
+
+const User = mongoose.model("User", userSchema);
+
+// Auth Middleware
+const authenticateToken = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const authHeader = req.headers["authorization"];
+  const token = authHeader && authHeader.split(" ")[1];
+  
+  if (!token) return res.status(401).json({ error: "Access Denied: No token provided" });
+
+  jwt.verify(token, JWT_SECRET, (err, user) => {
+    if (err) return res.status(403).json({ error: "Invalid token" });
+    (req as any).user = user;
+    next();
+  });
+};
 
 async function startServer() {
   const app = express();
@@ -34,23 +69,97 @@ async function startServer() {
   let useMongo = false;
   if (MONGODB_URI && MONGODB_URI !== "MY_MONGODB_CONNECTION_STRING") {
     try {
-      await mongoose.connect(MONGODB_URI);
+      await mongoose.connect(MONGODB_URI, { family: 4 });
       console.log("Connected to MongoDB successfully");
       useMongo = true;
     } catch (err) {
       console.error("MongoDB connection error:", err);
     }
   } else {
-    console.log("No MONGODB_URI found. Falling back to local cats.json");
-    // Initialize data file if it doesn't exist for fallback
+    console.log("No MONGODB_URI found. Falling back to local cats.json and users.json");
+    // Initialize data files if they don't exist for fallback
     try {
       await fs.access(DATA_FILE);
     } catch {
       await fs.writeFile(DATA_FILE, JSON.stringify([]));
     }
+    try {
+      await fs.access(USERS_FILE);
+    } catch {
+      await fs.writeFile(USERS_FILE, JSON.stringify([]));
+    }
   }
 
   // API Routes
+  
+  // Auth Routes
+  app.post("/api/register", async (req, res) => {
+    try {
+      const { email, password, username } = req.body;
+
+      if (!username) return res.status(400).json({ error: "Username is required" });
+
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      if (useMongo) {
+        const existingUser = await User.findOne({ $or: [{ email }, { username }] });
+        if (existingUser) return res.status(400).json({ error: "Email or username already exists" });
+
+        const user = new User({ email, username, password: hashedPassword });
+        await user.save();
+      } else {
+        const dataString = await fs.readFile(USERS_FILE, "utf-8");
+        const users = JSON.parse(dataString);
+        
+        if (users.find((u: any) => u.email === email || u.username === username)) {
+          return res.status(400).json({ error: "Email or username already exists" });
+        }
+        
+        users.push({ 
+          id: Date.now().toString(), 
+          email,
+          username,
+          password: hashedPassword,
+          createdAt: new Date().toISOString()
+        });
+        
+        await fs.writeFile(USERS_FILE, JSON.stringify(users, null, 2));
+      }
+
+      res.status(201).json({ message: "Registration successful" });
+    } catch (error: any) {
+      console.error("REGISTER ERROR:", error);
+      res.status(500).json({ error: "Registration failed: " + (error?.message || "Unknown error") });
+    }
+  });
+
+  app.post("/api/login", async (req, res) => {
+    try {
+      const { email, password } = req.body;
+      
+      let user;
+      
+      if (useMongo) {
+        user = await User.findOne({ email });
+      } else {
+        const dataString = await fs.readFile(USERS_FILE, "utf-8");
+        const users = JSON.parse(dataString);
+        user = users.find((u: any) => u.email === email);
+      }
+
+      if (!user) return res.status(400).json({ error: "User not found" });
+
+      const validPassword = await bcrypt.compare(password, user.password);
+      if (!validPassword) return res.status(400).json({ error: "Invalid password" });
+
+      const token = jwt.sign({ id: user._id || user.id, email: user.email, username: user.username }, JWT_SECRET, { expiresIn: "24h" });
+      res.json({ token, email: user.email, username: user.username });
+    } catch (error: any) {
+      console.error("LOGIN ERROR:", error);
+      res.status(500).json({ error: "Login failed: " + (error?.message || "Unknown error") });
+    }
+  });
+
   app.get("/api/cats", async (req, res) => {
     try {
       if (useMongo) {
@@ -65,7 +174,7 @@ async function startServer() {
     }
   });
 
-  app.post("/api/cats", async (req, res) => {
+  app.post("/api/cats", authenticateToken, async (req, res) => {
     try {
       const newCatData = req.body;
       const specimenName = newCatData.species || "Unknown specimen";
@@ -95,6 +204,38 @@ async function startServer() {
     } catch (error) {
       console.error(`CRITICAL ERROR: Failed to archive specimen:`, error);
       res.status(500).json({ error: "Failed to save cat data" });
+    }
+  });
+
+  // Breed prediction proxy
+  app.post("/api/predict-breed", async (req, res) => {
+    try {
+      const { imageBase64 } = req.body;
+
+      const base64Data = imageBase64.replace(/^data:image\/\w+;base64,/, '');
+      const imageBuffer = Buffer.from(base64Data, 'base64');
+
+      const boundary = '----FormBoundary' + Math.random().toString(36);
+      const body = Buffer.concat([
+        Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="cat.jpg"\r\nContent-Type: image/jpeg\r\n\r\n`),
+        imageBuffer,
+        Buffer.from(`\r\n--${boundary}--\r\n`)
+      ]);
+
+      const response = await fetch('http://localhost:8000/predict', {
+        method: 'POST',
+        headers: {
+          'Content-Type': `multipart/form-data; boundary=${boundary}`,
+          'Content-Length': body.length.toString()
+        },
+        body
+      });
+
+      const data = await response.json();
+      res.json(data);
+    } catch (error) {
+      console.error('Breed prediction error:', error);
+      res.status(500).json({ error: 'Failed to predict breed' });
     }
   });
 
