@@ -7,7 +7,6 @@ import mongoose from "mongoose";
 import dotenv from "dotenv";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
-import { spawn } from "child_process"
 
 dotenv.config();
 
@@ -259,24 +258,6 @@ async function startServer() {
       res.status(500).json({ error: "Failed to save cat data" });
     }
   });
-
-  // Start Python breed prediction server
-const pythonProcess = spawn('uvicorn', ['main:app', '--port', '8000'], {
-  cwd: 'C:\\Users\\Velri\\OneDrive\\Desktop\\VSC2\\Hackathon\\CatFinder',
-  stdio: 'inherit',
-  shell: true // needed on Windows
-});
-
-pythonProcess.on('error', (err) => {
-  console.error('Failed to start Python server:', err);
-});
-
-pythonProcess.on('close', (code) => {
-  console.log(`Python server exited with code ${code}`);
-});
-
-console.log('Starting Python breed prediction server on port 8000...');
-
   // Breed prediction proxy
   app.post("/api/predict-breed", async (req, res) => {
     try {
@@ -292,7 +273,7 @@ console.log('Starting Python breed prediction server on port 8000...');
         Buffer.from(`\r\n--${boundary}--\r\n`)
       ]);
 
-      const response = await fetch('http://localhost:8000/predict', {
+      const response = await fetch('http://prediction-api:8000/predict', {
         method: 'POST',
         headers: {
           'Content-Type': `multipart/form-data; boundary=${boundary}`,

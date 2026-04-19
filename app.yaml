@@ -1,0 +1,19 @@
+name: cat-finder
+region: nyc
+
+services:
+  - name: web
+    github:
+      repo: AJFergus-eng/CatFinder
+      branch: main
+    build_command: npm install -g pm2 && npm install
+    run_compand: npm run build && npm start
+    http_port: 8080
+
+  - name: prediction-api
+    github:
+      repo: AJFergus-eng/CatFinder
+      branch: main
+      build_command: pip install -r requirements.txt
+      run_compand: uvicorn main:app --host 0.0.0.0 --port 8000
+      http_port: 8000

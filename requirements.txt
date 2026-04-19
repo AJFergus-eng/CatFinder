@@ -1,0 +1,6 @@
+fastapi
+uvicorn
+tensoreflow
+numpy
+Pillow
+opencv-python
