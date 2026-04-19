@@ -1,6 +1,6 @@
 fastapi
 uvicorn
-tensoreflow
+tensorflow
 numpy
 Pillow
 opencv-python
