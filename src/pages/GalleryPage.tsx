@@ -16,6 +16,7 @@ interface CatData {
   image: string;
   lat?: number;
   lng?: number;
+  submittedBy?: string;
   createdAt: string;
 }
 
@@ -36,7 +37,7 @@ export default function GalleryPage() {
     image: '',
   });
 
-  const { isAuthenticated, token } = useAuth();
+  const { isAuthenticated, token, username } = useAuth();
 
   useEffect(() => {
     fetchCats();
@@ -130,7 +131,7 @@ export default function GalleryPage() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ ...formData, lat, lng }),
+        body: JSON.stringify({ ...formData, lat, lng, submittedBy: username }),
       });
 
       if (response.ok) {
@@ -229,14 +230,14 @@ export default function GalleryPage() {
                     onClick={() => setLocationMode('fuzzy')}
                     className={`flex-1 py-2 text-xs font-semibold transition-all ${locationMode === 'fuzzy' ? 'bg-sage text-white' : 'bg-bone text-stone'}`}
                   >
-                    📍 Generalized
+                    Generalized
                   </button>
                   <button
                     type="button"
                     onClick={() => setLocationMode('exact')}
                     className={`flex-1 py-2 text-xs font-semibold transition-all ${locationMode === 'exact' ? 'bg-sage text-white' : 'bg-bone text-stone'}`}
                   >
-                    🎯 Exact
+                    Exact (For Lost Cats)
                   </button>
                 </div>
                 <p className="text-[10px] text-stone mt-1 px-1">
@@ -331,14 +332,19 @@ export default function GalleryPage() {
                         </span>
                       )}
                     </div>
-                    <div className="mt-4 pt-4 border-t border-linen flex justify-between items-center">
-                      <span className="text-[10px] text-stone uppercase tracking-tighter">
-                        Archive Ref: {(cat.id || (cat as any)._id)?.toString().slice(-6)}
-                      </span>
-                      <span className="text-[10px] text-stone uppercase italic">
-                        {new Date(cat.createdAt).toLocaleDateString()}
-                      </span>
-                    </div>
+                      <div className="mt-4 pt-4 border-t border-linen flex justify-between items-center">
+                        <span className="text-[10px] text-stone uppercase tracking-tighter">
+                          Archive Ref: {(cat.id || (cat as any)._id)?.toString().slice(-6)}
+                        </span>
+                        <span className="text-[10px] text-stone uppercase italic">
+                          {new Date(cat.createdAt).toLocaleDateString()}
+                        </span>
+                      </div>
+                      {cat.submittedBy && (
+                        <div className="mt-2 text-[10px] text-stone">
+                          Submitted by <span className="text-sage font-semibold">{cat.submittedBy}</span>
+                        </div>
+                      )}
                   </div>
                 </motion.div>
               ))}

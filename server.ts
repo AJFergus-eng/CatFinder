@@ -27,6 +27,7 @@ const catSchema = new mongoose.Schema({
   image: String,
   lat: { type: Number, default: null },
   lng: { type: Number, default: null },
+  submittedBy: { type: String, default: null },
   createdAt: { type: Date, default: Date.now }
 });
 
