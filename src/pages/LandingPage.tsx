@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom';
 import WorldMap from '../components/WorldMap';
 
 export default function LandingPage() {
-  const [cats, setCats] = useState<{ species: string }[]>([]);
+  const [cats, setCats] = useState<{ species: string; catName: string; lat?: number; lng?: number }[]>([]);
 
   useEffect(() => {
     fetch('/api/cats')
@@ -70,7 +70,12 @@ export default function LandingPage() {
             </div>
           </div>
           
-          <WorldMap />
+          <WorldMap markers={cats.filter(c => c.lat && c.lng).map(c => ({
+            lat: c.lat!,
+            lng: c.lng!,
+            catName: c.catName,
+            species: c.species,
+          }))} />
         </motion.section>
 
         {/* Leaderboard Skeleton Section */}

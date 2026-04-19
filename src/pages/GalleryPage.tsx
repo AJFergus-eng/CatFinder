@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Cat, Search, Loader2, Upload, LockKeyhole } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
+import exifr from 'exifr'; //read metadata
 
 interface CatData {
   id: string;
@@ -12,6 +13,8 @@ interface CatData {
   fur: string;
   other: string;
   image: string;
+  lat?: number;
+  lng?: number;
   createdAt: string;
 }
 
@@ -27,7 +30,9 @@ export default function GalleryPage() {
     color: '',
     fur: '',
     other: '',
-    image: ''
+    image: '',
+    lat: null as number | null,
+    lng: null as number | null
   });
 
   const { isAuthenticated, token } = useAuth();
@@ -48,62 +53,78 @@ export default function GalleryPage() {
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const img = new Image();
-      img.onload = () => {
-        // 1. Set maximum dimensions
-        const MAX_WIDTH = 800;
-        const MAX_HEIGHT = 800;
-        let width = img.width;
-        let height = img.height;
+  // Extract GPS first, before the FileReader
+  let lat: number | null = null;
+  let lng: number | null = null;
+  try {
+    const gps = await exifr.gps(file);
+    try {
+  const gps = await exifr.gps(file);
+  console.log('Raw GPS result:', gps);
+  if (gps) {
+    lat = gps.latitude;
+    lng = gps.longitude;
+    console.log(`📍 GPS found: ${lat}, ${lng}`);
+  }
+} catch (err) {
+  console.log('📍 EXIF error:', err);  // CHANGE THIS to log the actual error
+}
+    if (gps) {
+      lat = gps.latitude;
+      lng = gps.longitude;
+      console.log(`📍 GPS found: ${lat}, ${lng}`);
+    }
+  } catch {
+    console.log('📍 Could not read EXIF data');
+  }
 
-        // 2. Calculate new dimensions (maintain aspect ratio)
-        if (width > height) {
-          if (width > MAX_WIDTH) {
-            height = Math.round((height * MAX_WIDTH) / width);
-            width = MAX_WIDTH;
-          }
-        } else {
-          if (height > MAX_HEIGHT) {
-            width = Math.round((width * MAX_HEIGHT) / height);
-            height = MAX_HEIGHT;
-          }
+  // Now do the image compression
+  const reader = new FileReader();
+  reader.onload = (event) => {
+    const img = new Image();
+    img.onload = () => {
+      const MAX_WIDTH = 800;
+      const MAX_HEIGHT = 800;
+      let width = img.width;
+      let height = img.height;
+
+      if (width > height) {
+        if (width > MAX_WIDTH) {
+          height = Math.round((height * MAX_WIDTH) / width);
+          width = MAX_WIDTH;
         }
-
-        // 3. Draw to in-memory canvas
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx?.drawImage(img, 0, 0, width, height);
-
-        // 4. Compress to JPEG (70% quality) and convert back to base64
-        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
-        
-        // --- LOG THE COMPRESSION SAVINGS ---
-        const originalSizeKB = Math.round((event.target?.result as string).length / 1024);
-        const newSizeKB = Math.round(compressedBase64.length / 1024);
-        const savedPercent = Math.round((1 - (newSizeKB / originalSizeKB)) * 100);
-        console.log(`📉 Image Compression: Original ${originalSizeKB} KB ➡️ Compressed ${newSizeKB} KB (Saved ${savedPercent}%)`);
-        // -----------------------------------
-
-        setFormData(prev => ({ ...prev, image: compressedBase64 }));
-      };
-      // Load the image source to trigger the img.onload event
-      if (event.target?.result) {
-        img.src = event.target.result as string;
+      } else {
+        if (height > MAX_HEIGHT) {
+          width = Math.round((width * MAX_HEIGHT) / height);
+          height = MAX_HEIGHT;
+        }
       }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx?.drawImage(img, 0, 0, width, height);
+
+      const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+
+      // Set image AND coordinates together in one update
+      setFormData(prev => ({ ...prev, image: compressedBase64, lat, lng }));
     };
-    reader.readAsDataURL(file);
+    if (event.target?.result) {
+      img.src = event.target.result as string;
+    }
   };
+  reader.readAsDataURL(file);
+};
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('Submitting formData:', formData.lat, formData.lng); // ADD THIS
     if (!formData.image) return;
 
     setIsUploading(true);
@@ -118,7 +139,7 @@ export default function GalleryPage() {
       });
 
       if (response.ok) {
-        setFormData({ catName: '', species: '', color: '', fur: '', other: '', image: '' });
+        setFormData({ catName: '', species: '', color: '', fur: '', other: '', image: '', lat: null, lng: null });
         fetchCats();
       }
     } catch (error) {
