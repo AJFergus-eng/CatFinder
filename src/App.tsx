@@ -9,6 +9,7 @@ import LandingPage from './pages/LandingPage.tsx';
 import GalleryPage from './pages/GalleryPage.tsx';
 import LoginPage from './pages/LoginPage.tsx';
 import { AuthProvider, useAuth } from './context/AuthContext.tsx';
+import MyCatsPage from './pages/MyCatsPage.tsx';
 
 function HeaderAdminControl() {
   const { isAuthenticated, username, logout } = useAuth();
@@ -61,6 +62,14 @@ function Layout({ children }: { children: React.ReactNode }) {
           >
             Archive
           </Link>
+          <Link
+            to="/mycats"
+            className={`text-xs md:text-sm font-semibold uppercase tracking-widest transition-all ${
+              location.pathname === '/mycats' ? 'text-sage border-b-2 border-sage pb-1' : 'text-stone hover:text-clay'
+            }`}
+          >
+            My Cats
+          </Link>
           <HeaderAdminControl />
         </nav>
       </header>
@@ -90,6 +99,7 @@ export default function App() {
           <Routes>
             <Route path="/" element={<LandingPage />} />
             <Route path="/gallery" element={<GalleryPage />} />
+            <Route path="/mycats" element={<MyCatsPage />} />
             <Route path="/login" element={<LoginPage />} />
           </Routes>
         </Layout>

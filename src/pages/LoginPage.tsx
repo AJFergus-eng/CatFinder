@@ -25,7 +25,7 @@ export default function LoginPage() {
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(isLogin ? { email, password } : { email, password, username }),
+        body: JSON.stringify(isLogin ? { email: email.toLowerCase(), password } : { email: email.toLowerCase(), password, username }),
       });
 
       const data = await response.json();

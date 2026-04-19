@@ -12,9 +12,7 @@ dotenv.config();
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DATA_FILE = path.join(__dirname, "cats.json");
-//const MONGODB_URI = process.env.MONGODB_URI;
-const MONGODB_URI = "mongodb://ajfergus_db_user:5rKX!4!2!GcpFRK@ac-fukbepf-shard-00-00.5homxhh.mongodb.net:27017,ac-fukbepf-shard-00-01.5homxhh.mongodb.net:27017,ac-fukbepf-shard-00-02.5homxhh.mongodb.net:27017/catArchive?ssl=true&replicaSet=atlas-7m4cri-shard-0&authSource=admin&retryWrites=true&w=majority";
-const TRACKER_FILE = path.join(__dirname, "tracker.json");
+const MONGODB_URI = process.env.MONGODB_URI;
 const USERS_FILE = path.join(__dirname, "users.json");
 const JWT_SECRET = process.env.JWT_SECRET || "fallback_super_secret_key_123";
 
@@ -142,8 +140,10 @@ async function startServer() {
 
   // Auth Routes
   app.post("/api/register", async (req, res) => {
+    //make new account
     try {
-      const { email, password, username } = req.body;
+      const { password, username } = req.body;
+      const email = req.body.email?.toLowerCase();
 
       if (!username) return res.status(400).json({ error: "Username is required" });
 
@@ -181,9 +181,12 @@ async function startServer() {
     }
   });
 
+  //login path
   app.post("/api/login", async (req, res) => {
     try {
-      const { email, password } = req.body;
+      const { password } = req.body;
+      const email = req.body.email?.toLowerCase();
+
       
       let user;
       
@@ -254,7 +257,6 @@ async function startServer() {
       res.status(500).json({ error: "Failed to save cat data" });
     }
   });
-
   // Breed prediction proxy
   app.post("/api/predict-breed", async (req, res) => {
     try {
@@ -270,7 +272,7 @@ async function startServer() {
         Buffer.from(`\r\n--${boundary}--\r\n`)
       ]);
 
-      const response = await fetch('http://localhost:8000/predict', {
+      const response = await fetch('http://prediction-api:8000/predict', {
         method: 'POST',
         headers: {
           'Content-Type': `multipart/form-data; boundary=${boundary}`,
