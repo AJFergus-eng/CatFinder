@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom';
 import WorldMap from '../components/WorldMap';
 
 export default function LandingPage() {
-  const [cats, setCats] = useState<{ species: string; catName: string; lat?: number; lng?: number }[]>([]);
+  const [cats, setCats] = useState<{ species: string; catName: string; lat?: number; lng?: number; isLost?: boolean }[]>([]);
 
   useEffect(() => {
     fetch('/api/cats')
@@ -75,6 +75,7 @@ export default function LandingPage() {
             lng: c.lng!,
             catName: c.catName,
             species: c.species,
+            isLost: c.isLost,
           }))} />
         </motion.section>
 

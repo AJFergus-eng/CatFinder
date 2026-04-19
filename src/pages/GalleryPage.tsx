@@ -17,6 +17,7 @@ interface CatData {
   lat?: number;
   lng?: number;
   submittedBy?: string;
+  isLost?: boolean;
   createdAt: string;
 }
 
@@ -30,6 +31,12 @@ export default function GalleryPage() {
   const [isPredicting, setIsPredicting] = useState(false);
   const [selectedCat, setSelectedCat] = useState<CatData | null>(null);
   const [showLocationWarning, setShowLocationWarning] = useState(false);
+  //map picker
+  const [showMapPicker, setShowMapPicker] = useState(false);
+  const [pickedLocation, setPickedLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const mapPickerRef = useRef<HTMLDivElement>(null);
+  const mapPickerInstanceRef = useRef<any>(null);
+  const markerRef = useRef<any>(null);
 
   const [formData, setFormData] = useState({
     species: '',
@@ -138,39 +145,73 @@ export default function GalleryPage() {
     setShowLocationWarning(true);
   };
 
-  const handleConfirmSubmit = async () => {
-    setShowLocationWarning(false);
+  const openMapPicker = () => {
+  setShowMapPicker(true);
+  setTimeout(() => {
+    if (!mapPickerRef.current || !window.google) return;
+    const map = new window.google.maps.Map(mapPickerRef.current, {
+      center: { lat: 39.5, lng: -98.35 }, // center of US as default
+      zoom: 4,
+      disableDefaultUI: false,
+    });
+    mapPickerInstanceRef.current = map;
 
-    let lat = gpsRef.current.lat;
-    let lng = gpsRef.current.lng;
-    if (locationMode === 'fuzzy' && lat !== null && lng !== null) {
-      const fuzzed = fuzzyCoords(lat, lng);
-      lat = fuzzed.lat;
-      lng = fuzzed.lng;
-    }
+    map.addListener('click', (e: any) => {
+      const lat = e.latLng.lat();
+      const lng = e.latLng.lng();
 
-    setIsUploading(true);
-    try {
-      const response = await fetch('/api/cats', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ ...formData, lat, lng, submittedBy: username, isLost: formData.isLost}),
+      // Remove old marker
+      if (markerRef.current) markerRef.current.setMap(null);
+
+      markerRef.current = new window.google.maps.Marker({
+        position: { lat, lng },
+        map,
       });
 
-      if (response.ok) {
-        setFormData({ catName: '', species: '', color: '', fur: '', other: '', image: '' });
-        gpsRef.current = { lat: null, lng: null };
-        fetchCats();
-      }
-    } catch (error) {
-      console.error('Error uploading cat:', error);
-    } finally {
-      setIsUploading(false);
+      setPickedLocation({ lat, lng });
+    });
+  }, 100); // small delay to let the modal render first
+};
+
+  const handleConfirmSubmit = async () => {
+  setShowLocationWarning(false);
+
+  let lat = gpsRef.current.lat;
+  let lng = gpsRef.current.lng;
+
+  // If user picked a location on the map, use that instead
+  if (pickedLocation) {
+    lat = pickedLocation.lat;
+    lng = pickedLocation.lng;
+  } else if (locationMode === 'fuzzy' && lat !== null && lng !== null) {
+    const fuzzed = fuzzyCoords(lat, lng);
+    lat = fuzzed.lat;
+    lng = fuzzed.lng;
+  }
+
+  setIsUploading(true);
+  try {
+    const response = await fetch('/api/cats', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ ...formData, lat, lng, submittedBy: username, isLost: formData.isLost }),
+    });
+
+    if (response.ok) {
+      setFormData({ catName: '', species: '', color: '', fur: '', other: '', image: '', isLost: false });
+      gpsRef.current = { lat: null, lng: null };
+      setPickedLocation(null);
+      fetchCats();
     }
-  };
+  } catch (error) {
+    console.error('Error uploading cat:', error);
+  } finally {
+    setIsUploading(false);
+  }
+};
 
   const filteredCats = cats.filter(cat => {
     const nameMatch = (cat.catName || '').toLowerCase().includes(searchQuery.toLowerCase());
@@ -203,6 +244,8 @@ export default function GalleryPage() {
                 </>
               )}
             </div>
+
+
 
             <form onSubmit={handleSubmitClick} className="flex flex-col gap-4">
               <div>
@@ -280,6 +323,7 @@ export default function GalleryPage() {
                     onClick={() => {
                       setLocationMode('exact');
                       setFormData(prev => ({ ...prev, isLost: true }));
+                      setPickedLocation(null);
                       openMapPicker();
                     }}
                     className={`flex-1 py-2 text-xs font-semibold transition-all ${locationMode === 'exact' ? 'bg-sage text-white' : 'bg-bone text-stone'}`}
@@ -411,6 +455,52 @@ export default function GalleryPage() {
           </div>
         )}
       </section>
+
+      {/* Map Picker Modal */}
+{showMapPicker && (
+  <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-6">
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className="bg-natural-card rounded-2xl overflow-hidden max-w-2xl w-full shadow-2xl"
+    >
+      <div className="p-6 pb-3 flex justify-between items-center">
+        <div>
+          <h2 className="font-serif text-xl text-clay">Pin Your Location</h2>
+          <p className="text-[11px] text-stone mt-1">Click anywhere on the map to place a pin for the cat's last known location.</p>
+        </div>
+        <button onClick={() => {
+          setShowMapPicker(false);
+          if (!pickedLocation) {
+            setLocationMode('fuzzy');
+            setFormData(prev => ({ ...prev, isLost: false }));
+          }
+        }}>
+          <X size={18} className="text-stone hover:text-clay transition-colors" />
+        </button>
+      </div>
+
+      <div ref={mapPickerRef} style={{ height: '400px', width: '100%' }} />
+
+      <div className="p-4 flex gap-3 items-center">
+        {pickedLocation ? (
+          <p className="flex-1 text-[11px] text-sage font-semibold">
+            📍 Pin placed at {pickedLocation.lat.toFixed(5)}, {pickedLocation.lng.toFixed(5)}
+          </p>
+        ) : (
+          <p className="flex-1 text-[11px] text-stone italic">No pin placed yet — click the map to set a location.</p>
+        )}
+        <button
+          disabled={!pickedLocation}
+          onClick={() => setShowMapPicker(false)}
+          className="py-2 px-6 bg-sage hover:bg-[#6c7d6d] disabled:bg-stone/30 disabled:cursor-not-allowed text-white rounded-xl text-xs font-semibold uppercase tracking-widest transition-colors"
+        >
+          Confirm Location
+        </button>
+      </div>
+    </motion.div>
+  </div>
+)}
 
       {/* Location Warning Modal */}
       {showLocationWarning && (
