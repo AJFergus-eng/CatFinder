@@ -1,16 +1,16 @@
-export const SPECIES_COLORS: Record<string, string> = {
-  'tabby':              '#E07B54',
-  'siamese':            '#A78BFA',
-  'persian':            '#F472B6',
-  'maine coon':         '#6EE7B7',
-  'bengal':             '#FCD34D',
-  'ragdoll':            '#93C5FD',
-  'sphynx':             '#F87171',
-  'british shorthair':  '#34D399',
-  'scottish fold':      '#FB923C',
-  'burmese':            '#818CF8',
-  'abyssinian':         '#4ADE80',
-  'russian blue':       '#60A5FA',
+export const SPECIES_COLORS: Record<string, string> = { 
+  'Abyssinian':             '#E07B54',
+  'Bengal':                 '#A78BFA',
+  'Birman':                 '#F472B6',
+  'Bombay':                 '#6EE7B7',
+  'British_Shorthair':      '#FCD34D',
+  'Egyptian_Mau':           '#93C5FD',
+  'Maine_Coon':             '#F87171',
+  'Persian':                '#34D399',
+  'Ragdoll':                '#FB923C',
+  'Russian_Blue':           '#818CF8',
+  'Siamese':                '#4ADE80',
+  'Sphynx':                 '#60A5FA',
 };
 
 export const DEFAULT_COLOR = '#94A3B8';

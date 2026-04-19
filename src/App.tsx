@@ -39,7 +39,7 @@ function Layout({ children }: { children: React.ReactNode }) {
       <header className="border-b border-linen pb-5 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
           <h1 className="font-serif text-3xl md:text-4xl font-normal text-clay">
-            <Link to="/" className="hover:text-sage transition-colors">Purr-Real</Link>
+            <Link to="/" className="hover:text-sage transition-colors">Purr-Real?</Link>
           </h1>
           <p className="text-stone font-serif italic text-sm mt-1">A curated database of feline companions</p>
         </div>
